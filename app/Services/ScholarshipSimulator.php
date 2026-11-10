@@ -13,7 +13,7 @@ class ScholarshipSimulator
      * @param array<int, array{date: string, amount: int}> $earlyRepayments
      * @return array<string, mixed>
      */
-    public function simulate(int $principal, float $annualRate, int $lendingEndYear, array $earlyRepayments = []): array
+    public function simulate(int $principal, float $annualRate, string $lendingEndMonth, array $earlyRepayments = []): array
     {
         if ($principal < 30_000) {
             throw new DomainException('返済総額は30,000円以上で入力してください。');
@@ -23,8 +23,9 @@ class ScholarshipSimulator
             throw new DomainException('年利は0%以上で入力してください。');
         }
 
-        if ($lendingEndYear < 1 || $lendingEndYear > 9999) {
-            throw new DomainException('貸与終了年を正しく入力してください。');
+        $lendingEndDate = DateTimeImmutable::createFromFormat('!Y-m-d', $lendingEndMonth.'-01');
+        if ($lendingEndDate === false || $lendingEndDate->format('Y-m') !== $lendingEndMonth) {
+            throw new DomainException('貸与終了年月を正しく入力してください。');
         }
 
         $repaymentYears = $this->repaymentYears($principal);
@@ -40,7 +41,12 @@ class ScholarshipSimulator
 
         $schedule = [];
         $balance = $principal;
-        $baseDate = new DateTimeImmutable(sprintf('%04d-10-27', $lendingEndYear));
+        $firstRepaymentMonth = $lendingEndDate->modify('+7 months');
+        $baseDate = $firstRepaymentMonth->setDate(
+            (int) $firstRepaymentMonth->format('Y'),
+            (int) $firstRepaymentMonth->format('n'),
+            27,
+        );
 
         for ($index = 0; $index < $installments && $balance > 0; $index++) {
             $interest = (int) ($balance * $monthlyRate);
@@ -83,7 +89,7 @@ class ScholarshipSimulator
         return [
             'principal' => $principal,
             'annual_rate' => $annualRate,
-            'lending_end_year' => $lendingEndYear,
+            'lending_end_month' => $lendingEndMonth,
             'repayment_years' => $repaymentYears,
             'installments' => $installments,
             'monthly_payment' => $monthlyPayment + $monthlyDeferredInterest,

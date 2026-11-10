@@ -27,20 +27,20 @@
                 @csrf
                 <div class="field">
                     <label for="principal">奨学金の返済総額</label>
-                    <div class="input-wrap"><input id="principal" name="principal" type="number" min="30000" max="100000000" step="10000" value="{{ old('principal', 3840000) }}" required><span class="suffix">円</span></div>
+                    <div class="input-wrap"><input id="principal" name="principal" type="number" min="30000" max="100000000" step="10000" value="{{ old('principal', $result['principal'] ?? 3840000) }}" required><span class="suffix">円</span></div>
                     @error('principal')<p class="error">{{ $message }}</p>@enderror
                 </div>
                 <div class="field">
                     <label for="annual_rate">年利</label>
-                    <div class="input-wrap"><input id="annual_rate" name="annual_rate" type="number" min="0" step="0.01" value="{{ old('annual_rate', '0.16') }}" required><span class="suffix">％</span></div>
+                    <div class="input-wrap"><input id="annual_rate" name="annual_rate" type="number" min="0" step="0.01" value="{{ old('annual_rate', $result['annual_rate'] ?? '0.16') }}" required><span class="suffix">％</span></div>
                     <p class="help">無利子の場合は 0 を入力してください。</p>
                     @error('annual_rate')<p class="error">{{ $message }}</p>@enderror
                 </div>
                 <div class="field">
-                    <label for="lending_end_year">奨学金の貸与終了年</label>
-                    <div class="input-wrap"><input id="lending_end_year" name="lending_end_year" type="number" min="1" max="9999" value="{{ old('lending_end_year', date('Y')) }}" required><span class="suffix">年</span></div>
-                    <p class="help">返済開始は貸与終了年の10月からとして計算します。</p>
-                    @error('lending_end_year')<p class="error">{{ $message }}</p>@enderror
+                    <label for="lending_end_month">奨学金の貸与終了年月</label>
+                    <div class="input-wrap"><input id="lending_end_month" name="lending_end_month" type="month" value="{{ old('lending_end_month', $result['lending_end_month'] ?? date('Y').'-03') }}" required></div>
+                    <p class="help">貸与終了月の7か月後を初回返済月として計算します（3月終了の場合は10月開始）。</p>
+                    @error('lending_end_month')<p class="error">{{ $message }}</p>@enderror
                 </div>
 
                 <hr class="divider">

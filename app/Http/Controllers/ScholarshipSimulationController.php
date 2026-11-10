@@ -20,14 +20,14 @@ class ScholarshipSimulationController extends Controller
         $validated = $request->validate([
             'principal' => ['required', 'integer', 'min:30000', 'max:100000000'],
             'annual_rate' => ['required', 'numeric', 'min:0'],
-            'lending_end_year' => ['required', 'integer', 'min:1', 'max:9999'],
+            'lending_end_month' => ['required', 'date_format:Y-m'],
             'early_repayments' => ['nullable', 'array', 'max:30'],
             'early_repayments.*.date' => ['required', 'date_format:Y-m'],
             'early_repayments.*.amount' => ['required', 'integer', 'min:1', 'max:100000000'],
         ], [], [
             'principal' => '返済総額',
             'annual_rate' => '年利',
-            'lending_end_year' => '貸与終了年',
+            'lending_end_month' => '貸与終了年月',
             'early_repayments.*.date' => '繰上返済年月',
             'early_repayments.*.amount' => '繰上返済額',
         ]);
@@ -36,7 +36,7 @@ class ScholarshipSimulationController extends Controller
             $result = $simulator->simulate(
                 (int) $validated['principal'],
                 (float) $validated['annual_rate'],
-                (int) $validated['lending_end_year'],
+                $validated['lending_end_month'],
                 array_values($validated['early_repayments'] ?? []),
             );
         } catch (DomainException $exception) {
