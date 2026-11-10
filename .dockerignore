@@ -1,0 +1,10 @@
+.git
+.github
+.idea
+.env
+.env.*
+!.env.example
+vendor
+node_modules
+storage/logs/*.log
+database/*.sqlite
