@@ -7,13 +7,17 @@ use DomainException;
 
 class ScholarshipSimulator
 {
-    private const REPAYMENT_INTERVAL_DAYS = 180;
-
     /**
      * @param array<int, array{date: string, amount: int}> $earlyRepayments
      * @return array<string, mixed>
      */
-    public function simulate(int $principal, float $annualRate, string $lendingEndMonth, array $earlyRepayments = []): array
+    public function simulate(
+        int $principal,
+        float $annualRate,
+        string $lendingEndMonth,
+        string $repaymentStartMonth,
+        array $earlyRepayments = [],
+    ): array
     {
         if ($principal < 30_000) {
             throw new DomainException('返済総額は30,000円以上で入力してください。');
@@ -23,28 +27,44 @@ class ScholarshipSimulator
             throw new DomainException('年利は0%以上で入力してください。');
         }
 
-        $lendingEndDate = DateTimeImmutable::createFromFormat('!Y-m-d', $lendingEndMonth.'-01');
-        if ($lendingEndDate === false || $lendingEndDate->format('Y-m') !== $lendingEndMonth) {
+        $lendingEndMonthDate = DateTimeImmutable::createFromFormat('!Y-m-d', $lendingEndMonth.'-01');
+        $repaymentStartMonthDate = DateTimeImmutable::createFromFormat('!Y-m-d', $repaymentStartMonth.'-01');
+        if ($lendingEndMonthDate === false || $lendingEndMonthDate->format('Y-m') !== $lendingEndMonth) {
             throw new DomainException('貸与終了年月を正しく入力してください。');
+        }
+        if ($repaymentStartMonthDate === false || $repaymentStartMonthDate->format('Y-m') !== $repaymentStartMonth) {
+            throw new DomainException('返済開始年月を正しく入力してください。');
         }
 
         $repaymentYears = $this->repaymentYears($principal);
         $installments = $repaymentYears * 12;
         $monthlyRate = $annualRate / 100 / 12;
-        $deferredInterestTotal = (int) ($principal * ($annualRate / 100) * self::REPAYMENT_INTERVAL_DAYS / 365);
+        $lendingEndDate = $lendingEndMonthDate->modify('+1 month')->modify('-1 day');
+        $firstPaymentMonth = $repaymentStartMonthDate->setDate(
+            (int) $repaymentStartMonthDate->format('Y'),
+            (int) $repaymentStartMonthDate->format('n'),
+            27,
+        );
+        $firstPaymentDate = $this->businessPaymentDate($firstPaymentMonth);
+
+        if ($firstPaymentDate <= $lendingEndDate) {
+            throw new DomainException('返済開始年月は貸与終了年月より後に指定してください。');
+        }
+
+        $deferredInterestDays = (int) $lendingEndDate->diff($firstPaymentDate)->days;
+        $deferredInterestTotal = (int) ($principal * ($annualRate / 100) * $deferredInterestDays / 365);
         $monthlyDeferredInterest = intdiv($deferredInterestTotal, $installments);
         $deferredInterestRemainder = $deferredInterestTotal - ($monthlyDeferredInterest * $installments);
-        $monthlyPayment = $monthlyRate === 0.0
+        $baseMonthlyPayment = $monthlyRate === 0.0
             ? (int) ($principal / $installments)
             : (int) ($principal * $monthlyRate * (1 + $monthlyRate) ** $installments / ((1 + $monthlyRate) ** $installments - 1));
-        $regularPaymentTotal = ($monthlyPayment + $monthlyDeferredInterest) * $installments + $deferredInterestRemainder;
+        $monthlyPayment = $baseMonthlyPayment + $monthlyDeferredInterest;
 
         $schedule = [];
         $balance = $principal;
-        $firstRepaymentMonth = $lendingEndDate->modify('+7 months');
-        $baseDate = $firstRepaymentMonth->setDate(
-            (int) $firstRepaymentMonth->format('Y'),
-            (int) $firstRepaymentMonth->format('n'),
+        $baseDate = $repaymentStartMonthDate->setDate(
+            (int) $repaymentStartMonthDate->format('Y'),
+            (int) $repaymentStartMonthDate->format('n'),
             27,
         );
 
@@ -65,7 +85,7 @@ class ScholarshipSimulator
                 break;
             }
 
-            $principalPayment = $monthlyPayment - $monthlyDeferredInterest - $interest;
+            $principalPayment = $baseMonthlyPayment - $interest;
             $balance -= $principalPayment;
             $schedule[] = $this->row(
                 $remainingInstallments, $balance + $principalPayment, $date, $monthlyPayment,
@@ -73,13 +93,15 @@ class ScholarshipSimulator
             );
         }
 
+        $regularPaymentTotal = array_sum(array_column($schedule, 'amount'));
+
         foreach ($earlyRepayments as $earlyRepayment) {
             $this->applyEarlyRepayment(
                 $schedule,
                 (string) $earlyRepayment['date'],
                 (int) $earlyRepayment['amount'],
                 $monthlyRate,
-                $monthlyPayment + $monthlyDeferredInterest,
+                $monthlyPayment,
             );
         }
 
@@ -90,12 +112,14 @@ class ScholarshipSimulator
             'principal' => $principal,
             'annual_rate' => $annualRate,
             'lending_end_month' => $lendingEndMonth,
+            'repayment_start_month' => $repaymentStartMonth,
+            'deferred_interest_days' => $deferredInterestDays,
             'repayment_years' => $repaymentYears,
             'installments' => $installments,
-            'monthly_payment' => $monthlyPayment + $monthlyDeferredInterest,
+            'monthly_payment' => $monthlyPayment,
             'regular_total' => $regularPaymentTotal,
             'total_paid' => $totalPaid,
-            'savings' => $regularPaymentTotal - $totalPaid,
+            'savings' => $earlyPaymentCount === 0 ? 0 : $regularPaymentTotal - $totalPaid,
             'early_payment_count' => $earlyPaymentCount,
             'schedule' => $schedule,
         ];

@@ -21,6 +21,7 @@ class ScholarshipSimulationController extends Controller
             'principal' => ['required', 'integer', 'min:30000', 'max:100000000'],
             'annual_rate' => ['required', 'numeric', 'min:0'],
             'lending_end_month' => ['required', 'date_format:Y-m'],
+            'repayment_start_month' => ['required', 'date_format:Y-m'],
             'early_repayments' => ['nullable', 'array', 'max:30'],
             'early_repayments.*.date' => ['required', 'date_format:Y-m'],
             'early_repayments.*.amount' => ['required', 'integer', 'min:1', 'max:100000000'],
@@ -28,6 +29,7 @@ class ScholarshipSimulationController extends Controller
             'principal' => '返済総額',
             'annual_rate' => '年利',
             'lending_end_month' => '貸与終了年月',
+            'repayment_start_month' => '返済開始年月',
             'early_repayments.*.date' => '繰上返済年月',
             'early_repayments.*.amount' => '繰上返済額',
         ]);
@@ -37,6 +39,7 @@ class ScholarshipSimulationController extends Controller
                 (int) $validated['principal'],
                 (float) $validated['annual_rate'],
                 $validated['lending_end_month'],
+                $validated['repayment_start_month'],
                 array_values($validated['early_repayments'] ?? []),
             );
         } catch (DomainException $exception) {
