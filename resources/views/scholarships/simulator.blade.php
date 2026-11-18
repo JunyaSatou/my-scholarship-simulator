@@ -16,8 +16,8 @@
     <div class="topline"><span class="brand">MY SCHOLARSHIP</span><span>返済計画を、見える化。</span></div>
     <header class="hero">
         <p class="eyebrow">Repayment planner</p>
-        <h1>奨学金返済<br>シミュレーター</h1>
-        <p class="lead">貸与総額と年利から毎月の返済計画を試算します。繰上返済を加えると、返済総額や返済回数がどう変わるか確認できます。</p>
+        <h1>奨学金返済シミュレーター</h1>
+        <p class="lead">貸与総額と年利から毎月の返済計画を試算します。<br>繰上返済を加えると、返済総額や返済回数がどう変わるか確認できます。</p>
     </header>
 
     <div class="layout">
